@@ -1,0 +1,83 @@
+# Author: Krish Sutariya
+
+name: Secure Staging Build Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  fail-closed-gate:
+    name: Fail-Closed Security Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install security and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff bandit detect-secrets
+
+      - name: Formatting gate
+        run: |
+          ruff format --check .
+          ruff check .
+
+      - name: Python security gate
+        run: |
+          bandit -r app -lll -iii
+
+      - name: Secret detection gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          detect-secrets scan --all-files > ci/detect-secrets.json
+          python ci/check_secrets.py ci/detect-secrets.json
+
+      - name: Hardcoded credential gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python ci/scan_hardcoded_secrets.py
+
+      - name: Terraform formatting gate
+        run: |
+          terraform fmt -check -recursive terraform
+
+      - name: Terraform validation
+        working-directory: terraform
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: Quarantine failed build
+        if: failure()
+        run: |
+          mkdir -p quarantine
+
+          printf '%s\n' \
+            'BUILD STATUS: QUARANTINED' \
+            'Reason: One or more fail-closed gates failed.' \
+            'Deployment is blocked.' \
+            > quarantine/BUILD_QUARANTINED.txt
+
+          cat quarantine/BUILD_QUARANTINED.txt
+
+      - name: Deployment barrier
+        if: success()
+        run: |
+          echo "BUILD STATUS: APPROVED"
+          echo "All required gates passed."
+          echo "Deployment may proceed."
