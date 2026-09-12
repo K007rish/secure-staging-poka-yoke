@@ -31,10 +31,7 @@ def main() -> int:
             for result in results:
                 detector = result.get("type", "Unknown detector")
                 line_number = result.get("line_number", "Unknown line")
-                print(
-                    f"- {filename}:{line_number} "
-                    f"({detector})"
-                )
+                print(f"- {filename}:{line_number} ({detector})")
 
         print("Build is quarantined. Remove the detected secret before merging.")
         return 1
