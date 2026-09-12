@@ -4,6 +4,7 @@ name: Secure Staging Build Gate
 
 on:
   pull_request:
+
   push:
     branches:
       - main
@@ -43,14 +44,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          detect-secrets scan --all-files > ci/detect-secrets.json
-          python ci/check_secrets.py ci/detect-secrets.json
+          detect-secrets scan --all-files > /tmp/detect-secrets.json
+          python ci/check_secrets.py /tmp/detect-secrets.json
 
       - name: Hardcoded credential gate
         shell: bash
         run: |
           set -euo pipefail
-          python ci/scan_hardcoded_secrets.py
+          python ci/scan_hardcode.py
 
       - name: Terraform formatting gate
         run: |
