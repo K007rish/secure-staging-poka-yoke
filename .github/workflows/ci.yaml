@@ -44,9 +44,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          detect-secrets scan --all-files > /tmp/detect-secrets.json
+          git ls-files -z | xargs -0 detect-secrets scan > /tmp/detect-secrets.json
           python ci/check_secrets.py /tmp/detect-secrets.json
-
       - name: Hardcoded credential gate
         shell: bash
         run: |
